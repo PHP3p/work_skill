@@ -8,4 +8,4 @@ git push --delete origin dev // 删除远程分支dev
 git branch 查看本地分支
 git branch -r 查看远程分支
 git reset HEAD 
-git revert
+git revert  安全的方式撤销提交
