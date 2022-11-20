@@ -9,3 +9,16 @@ git branch 查看本地分支
 git branch -r 查看远程分支
 git reset HEAD 
 git revert  安全的方式撤销提交
+git stash push -m __file__ 加入暂存区
+
+git log
+
+git log --author=wangyangyang --no-decorate --name-only --after={2022-07-30} --no-merges --format="" | sort | uniq > 19.txt
+
+git whatchanged --stat 
+
+
+git log --name-status --since='..' --until='..' | grep -E '^[A-Z]\b' | sort | uniq | sed -e 's/^\w\t*\ *//'
+
+svn log -v
+
