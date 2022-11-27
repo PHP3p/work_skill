@@ -1,5 +1,128 @@
-create table demo
+有时候我们需要使用PostgreSQL这种结构化数据库来存储一些非结构化数据，PostgreSQL恰好又提供了json这种数据类型，这里我们来简单介绍使用jsonb的一些常见操作。
+
+PostgreSQL 提供了 json和 jsonb两种 json类型，两者的主要区别就是，json查询相对慢一些，插入会快一点，而jsonb则相反，查询效率会高一点，插入会慢一点。
+
+下面进入我们今天的正题
+
+表结构
+create table purchase_order
 (
     id                     serial not null primary key,
     tag                    jsonb
 )
+ 
+数据也是非常简单
+
+INSERT INTO purchase_order (id, tag) VALUES (4787, '[{"uid": 1, "name": "标签名1", "add_time": "2021-05-29 17:00:00"}, {"uid": 2, "name": "标签名2", "add_time": "2021-05-29 17:00:00"}]');
+1
+重点是tag
+
+[{
+	"uid": 1,
+	"name": "标签名1",
+	"add_time": "2021-05-29 17:00:00"
+}, {
+	"uid": 2,
+	"name": "标签名2",
+	"add_time": "2021-05-29 17:00:00"
+}]
+ 
+操作
+这里来实现一些简单的操作
+
+条件查询
+我们查询 id = 4787 且 json 中 uid = 1 的tag
+
+-- 嵌套子查询
+select * from (
+select jsonb_array_elements(tag) as tt from purchase_order where id =  4787) a
+where  tt -> 'uid' = '1';
+
+-- 或者这种方式
+SELECT
+    id,r
+FROM
+    purchase_order s, jsonb_array_elements(s.tag) r
+WHERE
+    s.id =  4787  and r->>'uid' = '2' ;
+ 
+查询结果
+
+如果仅仅是查询json中包含 uid = 3的结果可以像这样查询
+
+SELECT tag FROM purchase_order
+WHERE id =  4787 and tag @> '[{"uid": 3}]';
+ 
+新增
+新增也比较简单，我们在原有的json上在增加个对象。
+原先的json对象是这样的
+
+[{
+	"uid": 1,
+	"name": "标签名1",
+	"add_time": "2021-05-29 17:00:00"
+}, {
+	"uid": 2,
+	"name": "标签名2",
+	"add_time": "2021-05-29 17:00:00"
+}]
+ 
+执行如下语句
+
+UPDATE purchase_order SET tag = tag || '[{
+	"uid": 3,
+	"name": "标签名3",
+	"add_time": "2021-05-29 17:00:00"
+}]' where  id = 4787;
+ 
+再查询
+
+[{
+	"uid": 1,
+	"name": "标签名1",
+	"add_time": "2021-05-29 17:00:00"
+}, {
+	"uid": 2,
+	"name": "标签名2",
+	"add_time": "2021-05-29 17:00:00"
+}, {
+	"uid": 3,
+	"name": "标签名3",
+	"add_time": "2021-05-29 17:00:00"
+}]
+
+删除
+如果我要删除上面 uid 为3的值，使用如下sql即可
+
+UPDATE purchase_order
+       SET tag = t.js_new
+      FROM
+          (
+           SELECT jsonb_agg( (tag ->> ( idx-1 )::int)::jsonb ) AS js_new
+             FROM purchase_order
+            CROSS JOIN jsonb_array_elements(tag)
+             WITH ORDINALITY arr(j,idx)
+            WHERE j->>'uid' NOT IN ('3')
+          ) t;
+
+再次查询
+
+
+修改
+我们现在要把 id = 4787
+name = '标签名1'
+的修改为name = '标签new'
+
+sql 如下
+
+UPDATE purchase_order AS g
+   SET tag = REPLACE(tag::text, '"name": "标签名1"','"name": "标签new"')::json
+ WHERE g.tag IN ( SELECT g.tag
+                     FROM purchase_order AS g
+                    CROSS JOIN jsonb_array_elements(g.tag) AS j
+                    WHERE id = 4787 and  j ->>'uid' = '1' )
+
+总结
+其实还有很多其他方式去实现，但是总体来说修改删除都不是特别方便和好维护，建议修改删除的时候直接当做字符串去全量更新即可，这样好维护一点。
+ 
+原文链接：https://blog.csdn.net/qq_42651904/article/details/117396553
