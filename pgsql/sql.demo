@@ -1,0 +1,5 @@
+create table demo
+(
+    id                     serial not null primary key,
+    tag                    jsonb
+)
