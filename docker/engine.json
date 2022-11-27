@@ -7,7 +7,7 @@
     },
     "experimental": false,
     "features": {
-      "buildkit": true
+      "buildkit": false
     },
     "registry-mirrors": [
       "https://registry.docker-cn.com",
